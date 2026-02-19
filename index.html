@@ -14,17 +14,15 @@
     background:var(--bg); color:var(--text);
     display:grid; place-items:center; min-height:100vh; padding:18px;
   }
-  .wrap{ width:min(780px,100%); }
+  .wrap{ width:min(1100px,100%); }
   .tabs{ display:flex; gap:8px; margin-bottom:12px; }
   .tab{
     padding:10px 16px; border-radius:999px;
     background:#1b2333; border:1px solid var(--border);
-    cursor:pointer; color:var(--muted);
-    user-select:none;
+    cursor:pointer; color:var(--muted); user-select:none;
   }
-  .tab[aria-selected="true"]{
-    background:var(--accent); color:#062015; font-weight:750;
-  }
+  .tab[aria-selected="true"]{ background:var(--accent); color:#062015; font-weight:750; }
+
   .top{
     background:var(--card); border:1px solid var(--border);
     border-radius:16px; padding:18px; margin-bottom:14px;
@@ -36,13 +34,29 @@
     padding:6px 10px; background:rgba(255,255,255,.03);
     font-size:14px;
   }
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap:14px;
+  }
+  @media (min-width: 900px){
+    .grid{ grid-template-columns: 1fr 1fr; }
+  }
+
   .card{
     background:var(--card); border:1px solid var(--border);
     border-radius:16px; overflow:hidden;
   }
+  .card h3{
+    margin:0; padding:12px 14px;
+    font-size:14px; color:var(--muted);
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.02);
+  }
   table{ width:100%; border-collapse:collapse; }
   thead th{
-    padding:12px 14px; color:var(--muted); text-align:left;
+    padding:10px 14px; color:var(--muted); text-align:left;
     border-bottom:1px solid var(--border);
     background:rgba(255,255,255,.02);
     font-size:13px;
@@ -63,70 +77,97 @@
 <body>
 <div class="wrap">
 
-  <div class="tabs" role="tablist" aria-label="Schedule">
-    <div class="tab" role="tab" id="tab-regular" aria-selected="true" tabindex="0">Regular</div>
-    <div class="tab" role="tab" id="tab-ramadan" aria-selected="false" tabindex="0">Ramadan</div>
+  <div class="tabs" role="tablist" aria-label="Schedule mode">
+    <div class="tab" role="tab" id="tab-ramadan" aria-selected="true" tabindex="0">Ramadan</div>
+    <div class="tab" role="tab" id="tab-regular" aria-selected="false" tabindex="0">Regular</div>
   </div>
 
   <div class="top">
     <div id="clock" class="time">--:--:--</div>
     <div class="sub">
       <span class="pill" id="dayLabel">--</span>
-      <span class="pill" id="modeLabel">Mode: Regular</span>
+      <span class="pill" id="modeLabel">Mode: Ramadan</span>
       <span class="pill" id="nowLabel">--</span>
     </div>
   </div>
 
-  <div class="card">
+  <div id="ramadanGrid" class="grid" style="display:none;">
+    <div class="card">
+      <h3>Primary (Ramadan)</h3>
+      <table>
+        <thead><tr><th style="width:30%;">Period</th><th style="width:45%;">Time</th><th>Status</th></tr></thead>
+        <tbody id="primaryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Secondary (Ramadan)</h3>
+      <table>
+        <thead><tr><th style="width:30%;">Period</th><th style="width:45%;">Time</th><th>Status</th></tr></thead>
+        <tbody id="secondaryBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="regularSingle" class="card" style="display:none;">
+    <h3>Regular</h3>
     <table>
-      <thead>
-        <tr><th style="width:28%;">Period</th><th style="width:42%;">Time</th><th>Status</th></tr>
-      </thead>
-      <tbody id="scheduleBody"></tbody>
+      <thead><tr><th style="width:30%;">Period</th><th style="width:45%;">Time</th><th>Status</th></tr></thead>
+      <tbody id="regularBody"></tbody>
     </table>
   </div>
 
 </div>
 
 <script>
-  const schedules = {
-    regular: [
-      { name:"P1",    start:"08:00", end:"08:40" },
-      { name:"P2",    start:"08:40", end:"09:20" },
-      { name:"P3",    start:"09:20", end:"10:00" },
-      { name:"Break", start:"10:00", end:"10:20" },
-      { name:"P4",    start:"10:20", end:"11:00" },
-      { name:"P5",    start:"11:00", end:"11:40" },
-      { name:"P6",    start:"11:40", end:"12:20" },
-      { name:"Lunch", start:"12:20", end:"13:00" },
-      { name:"P7",    start:"13:00", end:"13:40" },
-      { name:"P8",    start:"13:40", end:"14:20" },
-      { name:"P9",    start:"14:20", end:"15:00" }
-    ],
-    ramadan: [
-      { name:"Period 1",       start:"09:00", end:"09:30" },
-      { name:"Period 2",       start:"09:30", end:"10:00" },
-      { name:"Period 3",       start:"10:00", end:"10:30" },
-      { name:"Period 4",       start:"10:30", end:"11:00" },
-      { name:"Period 5",       start:"11:00", end:"11:30" },
-      { name:"Period 6 (MYP)", start:"11:30", end:"12:00" },
-      { name:"Period 7 (DP)",  start:"12:00", end:"12:30" },
-      { name:"Period 8 (PYP)", start:"12:30", end:"13:00" },
-      { name:"Period 9",       start:"13:00", end:"13:30" },
-      { name:"Period 10",      start:"13:30", end:"14:00" }
-    ]
-  };
+  // Default page should be Ramadan
+  let mode = "ramadan";
 
-  let mode = "regular";
+  // Ramadan timings you provided (used for BOTH Primary and Secondary unless you change one list)
+  const ramadanPrimary = [
+    { name:"Period 1",        start:"09:00", end:"09:30" },
+    { name:"Period 2",        start:"09:30", end:"10:00" },
+    { name:"Period 3",        start:"10:00", end:"10:30" },
+    { name:"Period (Break)",  start:"10:30", end:"11:00" },
+    { name:"Period 4",        start:"11:00", end:"11:30" },
+    { name:"Period 5",        start:"11:30", end:"12:00" },
+    { name:"Period 6",        start:"12:00", end:"12:30" },
+    { name:"Period 7 (Lunch)",start:"12:30", end:"13:00" },
+    { name:"Period 8",        start:"13:00", end:"13:30" },
+    { name:"Period 9",        start:"13:30", end:"14:00" }
+  ];
+
+  // Copy of primary (edit if secondary differs)
+  const ramadanSecondary = [...ramadanPrimary];
+
+  const regularSchedule = [
+    { name:"P1",    start:"08:00", end:"08:40" },
+    { name:"P2",    start:"08:40", end:"09:20" },
+    { name:"P3",    start:"09:20", end:"10:00" },
+    { name:"Break", start:"10:00", end:"10:20" },
+    { name:"P4",    start:"10:20", end:"11:00" },
+    { name:"P5",    start:"11:00", end:"11:40" },
+    { name:"P6",    start:"11:40", end:"12:20" },
+    { name:"Lunch", start:"12:20", end:"13:00" },
+    { name:"P7",    start:"13:00", end:"13:40" },
+    { name:"P8",    start:"13:40", end:"14:20" },
+    { name:"P9",    start:"14:20", end:"15:00" }
+  ];
 
   const clockEl = document.getElementById("clock");
   const dayLabelEl = document.getElementById("dayLabel");
   const modeLabelEl = document.getElementById("modeLabel");
   const nowLabelEl = document.getElementById("nowLabel");
-  const bodyEl = document.getElementById("scheduleBody");
 
-  const tabRegular = document.getElementById("tab-regular");
   const tabRamadan = document.getElementById("tab-ramadan");
+  const tabRegular = document.getElementById("tab-regular");
+
+  const ramadanGrid = document.getElementById("ramadanGrid");
+  const regularSingle = document.getElementById("regularSingle");
+
+  const primaryBody = document.getElementById("primaryBody");
+  const secondaryBody = document.getElementById("secondaryBody");
+  const regularBody = document.getElementById("regularBody");
 
   function toMinutes(hhmm){
     const [h,m] = hhmm.split(":").map(Number);
@@ -137,9 +178,9 @@
     return d.toLocaleDateString([], { weekday:"long", year:"numeric", month:"short", day:"2-digit" });
   }
 
-  function buildTable(){
-    bodyEl.innerHTML = "";
-    for(const row of schedules[mode]){
+  function buildTable(tbody, schedule){
+    tbody.innerHTML = "";
+    for(const row of schedule){
       const tr = document.createElement("tr");
       tr.dataset.start = row.start;
       tr.dataset.end = row.end;
@@ -148,28 +189,38 @@
         <td>${row.start} – ${row.end}</td>
         <td class="muted">—</td>
       `;
-      bodyEl.appendChild(tr);
+      tbody.appendChild(tr);
     }
   }
 
   function setMode(nextMode){
     mode = nextMode;
-    tabRegular.setAttribute("aria-selected", mode === "regular");
+
     tabRamadan.setAttribute("aria-selected", mode === "ramadan");
-    modeLabelEl.textContent = `Mode: ${mode === "regular" ? "Regular" : "Ramadan"}`;
-    buildTable();
+    tabRegular.setAttribute("aria-selected", mode === "regular");
+
+    modeLabelEl.textContent = `Mode: ${mode === "ramadan" ? "Ramadan" : "Regular"}`;
+
+    if(mode === "ramadan"){
+      ramadanGrid.style.display = "grid";
+      regularSingle.style.display = "none";
+      buildTable(primaryBody, ramadanPrimary);
+      buildTable(secondaryBody, ramadanSecondary);
+    } else {
+      ramadanGrid.style.display = "none";
+      regularSingle.style.display = "block";
+      buildTable(regularBody, regularSchedule);
+    }
+
     update();
   }
 
-  function update(){
+  function highlightNow(tbody, scheduleName){
     const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-    dayLabelEl.textContent = fmtDay(now);
-
     const nowMins = now.getHours()*60 + now.getMinutes();
-    const rows = Array.from(bodyEl.querySelectorAll("tr"));
 
-    let activeRow = null;
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    let active = null;
 
     for(const r of rows){
       r.classList.remove("active");
@@ -179,39 +230,50 @@
 
       const s = toMinutes(r.dataset.start);
       const e = toMinutes(r.dataset.end);
-      if(nowMins >= s && nowMins < e) activeRow = r;
+      if(nowMins >= s && nowMins < e) active = r;
     }
 
-    if(activeRow){
-      activeRow.classList.add("active");
-      const statusTd = activeRow.children[2];
+    if(active){
+      active.classList.add("active");
+      const statusTd = active.children[2];
       statusTd.textContent = "Now";
       statusTd.className = "statusNow";
-      nowLabelEl.textContent = `Now: ${activeRow.children[0].textContent}`;
-    } else {
-      const sch = schedules[mode];
-      const firstStart = toMinutes(sch[0].start);
-      const lastEnd = toMinutes(sch[sch.length-1].end);
+      return `${scheduleName}: ${active.children[0].textContent}`;
+    }
 
-      if(nowMins < firstStart) nowLabelEl.textContent = "Status: Before school";
-      else if(nowMins >= lastEnd) nowLabelEl.textContent = "Status: After school";
-      else nowLabelEl.textContent = "Status: Transition / gap";
+    const firstStart = toMinutes(schedule[0].start);
+    const lastEnd = toMinutes(schedule[schedule.length-1].end);
+
+    if(nowMins < firstStart) return `${scheduleName}: Before school`;
+    if(nowMins >= lastEnd) return `${scheduleName}: After school`;
+    return `${scheduleName}: Transition / gap`;
+  }
+
+  function update(){
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+    dayLabelEl.textContent = fmtDay(now);
+
+    if(mode === "ramadan"){
+      const p = highlightNow(primaryBody, "Primary");
+      const s = highlightNow(secondaryBody, "Secondary");
+      nowLabelEl.textContent = `${p} | ${s}`;
+    } else {
+      const r = highlightNow(regularBody, "Regular");
+      nowLabelEl.textContent = r;
     }
   }
 
-  // Event listeners (no inline JS)
-  tabRegular.addEventListener("click", () => setMode("regular"));
+  // Events
   tabRamadan.addEventListener("click", () => setMode("ramadan"));
+  tabRegular.addEventListener("click", () => setMode("regular"));
 
-  // Keyboard accessibility
-  tabRegular.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("regular"); }});
   tabRamadan.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("ramadan"); }});
+  tabRegular.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("regular"); }});
 
-  // Init
-  buildTable();
-  update();
+  // Init (default Ramadan)
+  setMode("ramadan");
   setInterval(update, 1000);
 </script>
 </body>
 </html>
-
