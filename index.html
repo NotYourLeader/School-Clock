@@ -124,35 +124,36 @@
   let mode = "ramadan";
 
   // Ramadan timings you provided (used for BOTH Primary and Secondary unless you change one list)
-  const ramadanPrimary = [
-    { name:"Period 1",        start:"09:00", end:"09:30" },
-    { name:"Period 2",        start:"09:30", end:"10:00" },
-    { name:"Period 3",        start:"10:00", end:"10:30" },
-    { name:"Period (Break)",  start:"10:30", end:"11:00" },
-    { name:"Period 4",        start:"11:00", end:"11:30" },
-    { name:"Period 5",        start:"11:30", end:"12:00" },
-    { name:"Period 6",        start:"12:00", end:"12:30" },
-    { name:"Period 7 (Lunch)",start:"12:30", end:"13:00" },
-    { name:"Period 8",        start:"13:00", end:"13:30" },
-    { name:"Period 9",        start:"13:30", end:"14:00" }
-  ];
+// ===== RAMADAN SCHEDULES =====
 
-  // Copy of primary (edit if secondary differs)
-  const ramadanSecondary = [...ramadanPrimary];
+const ramadanPYP = [
+  { name:"Period 1",        start:"09:00", end:"09:30" },
+  { name:"Period 2",        start:"09:30", end:"10:00" },
+  { name:"Period 3",        start:"10:00", end:"10:30" },
+  { name:"Break",           start:"10:30", end:"11:00" },
+  { name:"Period 4",        start:"11:00", end:"11:30" },
+  { name:"Period 5",        start:"11:30", end:"12:00" },
+  { name:"Period 6",        start:"12:00", end:"12:30" },
+  { name:"Lunch",           start:"12:30", end:"13:00" },
+  { name:"Period 7",        start:"13:00", end:"13:30" },
+  { name:"Period 8",        start:"13:30", end:"14:00" }
+];
 
-  const regularSchedule = [
-    { name:"P1",    start:"08:00", end:"08:40" },
-    { name:"P2",    start:"08:40", end:"09:20" },
-    { name:"P3",    start:"09:20", end:"10:00" },
-    { name:"Break", start:"10:00", end:"10:20" },
-    { name:"P4",    start:"10:20", end:"11:00" },
-    { name:"P5",    start:"11:00", end:"11:40" },
-    { name:"P6",    start:"11:40", end:"12:20" },
-    { name:"Lunch", start:"12:20", end:"13:00" },
-    { name:"P7",    start:"13:00", end:"13:40" },
-    { name:"P8",    start:"13:40", end:"14:20" },
-    { name:"P9",    start:"14:20", end:"15:00" }
-  ];
+
+// KEEP — your original Secondary Ramadan schedule
+const ramadanSecondary = [
+  { name:"Period 1",       start:"09:00", end:"09:30"},
+  { name:"Period 2",       start:"09:30", end:"10:00"},
+  { name:"Period 3",       start:"10:00", end:"10:30"},
+  { name:"Period 4",       start:"10:30", end:"11:00"},
+  { name:"Period 5",       start:"11:00", end:"11:30"},
+  { name:"Period 6 (MYP)", start:"11:30", end:"12:00"},
+  { name:"Period 7 (DP)",  start:"12:00", end:"12:30"},
+  { name:"Period 8 (PYP)", start:"12:30", end:"13:00"},
+  { name:"Period 9",       start:"13:00", end:"13:30"},
+  { name:"Period 10",      start:"13:30", end:"14:00"}
+];
+
 
   const clockEl = document.getElementById("clock");
   const dayLabelEl = document.getElementById("dayLabel");
@@ -277,3 +278,4 @@
 </script>
 </body>
 </html>
+
