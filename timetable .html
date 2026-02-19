@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>School Clock</title>
+<style>
+  :root{
+    --bg:#0b0f14; --card:#121825; --text:#e8eefc; --muted:#9fb0d0;
+    --accent:#39d98a; --accent2:#3aa0ff; --border:rgba(255,255,255,.10);
+  }
+  body{
+    margin:0; font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+    background:var(--bg); color:var(--text);
+    display:grid; place-items:center; min-height:100vh; padding:18px;
+  }
+  .wrap{ width:min(780px,100%); }
+  .tabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .tab{
+    padding:10px 16px; border-radius:999px;
+    background:#1b2333; border:1px solid var(--border);
+    cursor:pointer; color:var(--muted);
+    user-select:none;
+  }
+  .tab[aria-selected="true"]{
+    background:var(--accent); color:#062015; font-weight:750;
+  }
+  .top{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; padding:18px; margin-bottom:14px;
+  }
+  .time{ font-size:clamp(34px, 5vw, 54px); font-weight:800; letter-spacing:.5px; }
+  .sub{ margin-top:6px; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap; }
+  .pill{
+    border:1px solid var(--border); border-radius:999px;
+    padding:6px 10px; background:rgba(255,255,255,.03);
+    font-size:14px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden;
+  }
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    padding:12px 14px; color:var(--muted); text-align:left;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.02);
+    font-size:13px;
+  }
+  tbody td{ padding:12px 14px; border-bottom:1px solid var(--border); }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  tr.active{
+    background:rgba(57,217,138,.15);
+    outline:2px solid rgba(57,217,138,.40);
+    outline-offset:-2px;
+  }
+  tr.active td:first-child{ color:var(--accent); font-weight:800; }
+  .statusNow{ color:var(--accent2); font-weight:800; }
+  .muted{ color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="tabs" role="tablist" aria-label="Schedule">
+    <div class="tab" role="tab" id="tab-regular" aria-selected="true" tabindex="0">Regular</div>
+    <div class="tab" role="tab" id="tab-ramadan" aria-selected="false" tabindex="0">Ramadan</div>
+  </div>
+
+  <div class="top">
+    <div id="clock" class="time">--:--:--</div>
+    <div class="sub">
+      <span class="pill" id="dayLabel">--</span>
+      <span class="pill" id="modeLabel">Mode: Regular</span>
+      <span class="pill" id="nowLabel">--</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <table>
+      <thead>
+        <tr><th style="width:28%;">Period</th><th style="width:42%;">Time</th><th>Status</th></tr>
+      </thead>
+      <tbody id="scheduleBody"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  const schedules = {
+    regular: [
+      { name:"P1",    start:"08:00", end:"08:40" },
+      { name:"P2",    start:"08:40", end:"09:20" },
+      { name:"P3",    start:"09:20", end:"10:00" },
+      { name:"Break", start:"10:00", end:"10:20" },
+      { name:"P4",    start:"10:20", end:"11:00" },
+      { name:"P5",    start:"11:00", end:"11:40" },
+      { name:"P6",    start:"11:40", end:"12:20" },
+      { name:"Lunch", start:"12:20", end:"13:00" },
+      { name:"P7",    start:"13:00", end:"13:40" },
+      { name:"P8",    start:"13:40", end:"14:20" },
+      { name:"P9",    start:"14:20", end:"15:00" }
+    ],
+    ramadan: [
+      { name:"Period 1",       start:"09:00", end:"09:30" },
+      { name:"Period 2",       start:"09:30", end:"10:00" },
+      { name:"Period 3",       start:"10:00", end:"10:30" },
+      { name:"Period 4",       start:"10:30", end:"11:00" },
+      { name:"Period 5",       start:"11:00", end:"11:30" },
+      { name:"Period 6 (MYP)", start:"11:30", end:"12:00" },
+      { name:"Period 7 (DP)",  start:"12:00", end:"12:30" },
+      { name:"Period 8 (PYP)", start:"12:30", end:"13:00" },
+      { name:"Period 9",       start:"13:00", end:"13:30" },
+      { name:"Period 10",      start:"13:30", end:"14:00" }
+    ]
+  };
+
+  let mode = "regular";
+
+  const clockEl = document.getElementById("clock");
+  const dayLabelEl = document.getElementById("dayLabel");
+  const modeLabelEl = document.getElementById("modeLabel");
+  const nowLabelEl = document.getElementById("nowLabel");
+  const bodyEl = document.getElementById("scheduleBody");
+
+  const tabRegular = document.getElementById("tab-regular");
+  const tabRamadan = document.getElementById("tab-ramadan");
+
+  function toMinutes(hhmm){
+    const [h,m] = hhmm.split(":").map(Number);
+    return h*60 + m;
+  }
+
+  function fmtDay(d){
+    return d.toLocaleDateString([], { weekday:"long", year:"numeric", month:"short", day:"2-digit" });
+  }
+
+  function buildTable(){
+    bodyEl.innerHTML = "";
+    for(const row of schedules[mode]){
+      const tr = document.createElement("tr");
+      tr.dataset.start = row.start;
+      tr.dataset.end = row.end;
+      tr.innerHTML = `
+        <td>${row.name}</td>
+        <td>${row.start} – ${row.end}</td>
+        <td class="muted">—</td>
+      `;
+      bodyEl.appendChild(tr);
+    }
+  }
+
+  function setMode(nextMode){
+    mode = nextMode;
+    tabRegular.setAttribute("aria-selected", mode === "regular");
+    tabRamadan.setAttribute("aria-selected", mode === "ramadan");
+    modeLabelEl.textContent = `Mode: ${mode === "regular" ? "Regular" : "Ramadan"}`;
+    buildTable();
+    update();
+  }
+
+  function update(){
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+    dayLabelEl.textContent = fmtDay(now);
+
+    const nowMins = now.getHours()*60 + now.getMinutes();
+    const rows = Array.from(bodyEl.querySelectorAll("tr"));
+
+    let activeRow = null;
+
+    for(const r of rows){
+      r.classList.remove("active");
+      const statusTd = r.children[2];
+      statusTd.textContent = "—";
+      statusTd.className = "muted";
+
+      const s = toMinutes(r.dataset.start);
+      const e = toMinutes(r.dataset.end);
+      if(nowMins >= s && nowMins < e) activeRow = r;
+    }
+
+    if(activeRow){
+      activeRow.classList.add("active");
+      const statusTd = activeRow.children[2];
+      statusTd.textContent = "Now";
+      statusTd.className = "statusNow";
+      nowLabelEl.textContent = `Now: ${activeRow.children[0].textContent}`;
+    } else {
+      const sch = schedules[mode];
+      const firstStart = toMinutes(sch[0].start);
+      const lastEnd = toMinutes(sch[sch.length-1].end);
+
+      if(nowMins < firstStart) nowLabelEl.textContent = "Status: Before school";
+      else if(nowMins >= lastEnd) nowLabelEl.textContent = "Status: After school";
+      else nowLabelEl.textContent = "Status: Transition / gap";
+    }
+  }
+
+  // Event listeners (no inline JS)
+  tabRegular.addEventListener("click", () => setMode("regular"));
+  tabRamadan.addEventListener("click", () => setMode("ramadan"));
+
+  // Keyboard accessibility
+  tabRegular.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("regular"); }});
+  tabRamadan.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("ramadan"); }});
+
+  // Init
+  buildTable();
+  update();
+  setInterval(update, 1000);
+</script>
+</body>
+</html>
