@@ -1,57 +1,194 @@
-    const firstStart = toMinutes(schedule[0].start);
-    const lastEnd = toMinutes(schedule[schedule.length-1].end);
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>School Clock</title>
 
-    if(nowMins < firstStart) return `${label}: Before school`;
-    if(nowMins >= lastEnd) return `${label}: After school`;
-    return `${label}: Transition / gap`;
-  }
+<style>
+:root{
+  --bg:#0b0f14; --card:#121825; --text:#e8eefc; --muted:#9fb0d0;
+  --accent:#39d98a; --accent2:#3aa0ff; --border:rgba(255,255,255,.10);
+}
+body{
+  margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  background:var(--bg);color:var(--text);
+  display:grid;place-items:center;min-height:100vh;padding:18px;
+}
+.wrap{width:min(1100px,100%);}
+.tabs{display:flex;gap:8px;margin-bottom:12px;}
+.tab{
+  padding:10px 16px;border-radius:999px;
+  background:#1b2333;border:1px solid var(--border);
+  cursor:pointer;color:var(--muted);
+}
+.tab[aria-selected="true"]{background:var(--accent);color:#062015;font-weight:700;}
 
-  function update(){
-    const now = new Date();
-    clockEl.textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
-    dayLabelEl.textContent = fmtDay(now);
+.top{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;}
+.time{font-size:52px;font-weight:800;}
+.sub{margin-top:6px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;}
 
-    if(mode === "ramadan"){
-      const p = highlightNow(pypBody, ramadanPYP, "PYP");
-      const s = highlightNow(secondaryBody, ramadanSecondary, "Secondary");
-      nowLabelEl.textContent = `${p} | ${s}`;
-    } else {
-      const r = highlightNow(regularBody, regularSchedule, "Regular");
-      nowLabelEl.textContent = r;
-    }
-  }
+.grid{display:grid;gap:14px;}
+@media (min-width:900px){.grid{grid-template-columns:1fr 1fr;}}
 
-  function setMode(nextMode){
-    mode = nextMode;
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.card h3{margin:0;padding:12px 14px;font-size:14px;color:var(--muted);border-bottom:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;}
+thead th{padding:10px 14px;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border);}
+tbody tr:last-child td{border-bottom:none;}
+.active{background:rgba(57,217,138,.15);}
+.statusNow{color:var(--accent2);font-weight:700;}
+</style>
+</head>
+<body>
 
-    tabRamadan.setAttribute("aria-selected", mode === "ramadan");
-    tabRegular.setAttribute("aria-selected", mode === "regular");
-    modeLabelEl.textContent = `Mode: ${mode === "ramadan" ? "Ramadan" : "Regular"}`;
+<div class="wrap">
 
-    if(mode === "ramadan"){
-      ramadanGrid.style.display = "grid";
-      regularSingle.style.display = "none";
-      buildTable(pypBody, ramadanPYP);
-      buildTable(secondaryBody, ramadanSecondary);
-    } else {
-      ramadanGrid.style.display = "none";
-      regularSingle.style.display = "block";
-      buildTable(regularBody, regularSchedule);
-    }
+<div class="tabs">
+  <div class="tab" id="tab-ramadan" aria-selected="true">Ramadan</div>
+  <div class="tab" id="tab-regular" aria-selected="false">Regular</div>
+</div>
 
-    update();
-  }
+<div class="top">
+  <div id="clock" class="time">--:--:--</div>
+  <div class="sub" id="nowLabel">--</div>
+</div>
 
-  // ===== EVENTS =====
-  tabRamadan.addEventListener("click", () => setMode("ramadan"));
-  tabRegular.addEventListener("click", () => setMode("regular"));
+<div id="ramadanGrid" class="grid">
+  <div class="card">
+    <h3>PYP (Ramadan)</h3>
+    <table><tbody id="pypBody"></tbody></table>
+  </div>
+  <div class="card">
+    <h3>Secondary (Ramadan)</h3>
+    <table><tbody id="secondaryBody"></tbody></table>
+  </div>
+</div>
 
-  tabRamadan.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("ramadan"); }});
-  tabRegular.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("regular"); }});
+<div id="regularSingle" class="card" style="display:none;">
+  <h3>Regular</h3>
+  <table><tbody id="regularBody"></tbody></table>
+</div>
 
-  // ===== INIT =====
-  setMode("ramadan");
-  setInterval(update, 1000);
+</div>
+
+<script>
+
+/* ---------- SCHEDULES ---------- */
+
+const ramadanPYP = [
+["Period 1","09:00","09:30"],
+["Period 2","09:30","10:00"],
+["Period 3","10:00","10:30"],
+["Break","10:30","11:00"],
+["Period 4","11:00","11:30"],
+["Period 5","11:30","12:00"],
+["Period 6","12:00","12:30"],
+["Lunch","12:30","13:00"],
+["Period 8","13:00","13:30"],
+["Period 9","13:30","14:00"]
+];
+
+const ramadanSecondary = [
+["Period 1","09:00","09:30"],
+["Period 2","09:30","10:00"],
+["Period 3","10:00","10:30"],
+["Period 4","10:30","11:00"],
+["Period 5","11:00","11:30"],
+["Period 6 (MYP)","11:30","12:00"],
+["Period 7 (DP)","12:00","12:30"],
+["Period 8 (PYP)","12:30","13:00"],
+["Period 9","13:00","13:30"],
+["Period 10","13:30","14:00"]
+];
+
+const regularSchedule = [
+["P1","08:00","08:40"],
+["P2","08:40","09:20"],
+["P3","09:20","10:00"],
+["Break","10:00","10:20"],
+["P4","10:20","11:00"],
+["P5","11:00","11:40"],
+["P6","11:40","12:20"],
+["Lunch","12:20","13:00"],
+["P7","13:00","13:40"],
+["P8","13:40","14:20"],
+["P9","14:20","15:00"]
+];
+
+let mode="ramadan";
+
+/* ---------- BUILD TABLE ---------- */
+
+function build(tbody,data){
+ tbody.innerHTML="";
+ data.forEach(r=>{
+   const tr=document.createElement("tr");
+   tr.dataset.start=r[1];
+   tr.dataset.end=r[2];
+   tr.innerHTML=`<td>${r[0]}</td><td>${r[1]} – ${r[2]}</td><td class="status"></td>`;
+   tbody.appendChild(tr);
+ });
+}
+
+/* ---------- TIME LOGIC ---------- */
+
+function mins(t){const [h,m]=t.split(":");return h*60+ +m;}
+
+function highlight(tbody,data,label){
+ const now=new Date();
+ const n=now.getHours()*60+now.getMinutes();
+ let current="";
+
+ tbody.querySelectorAll("tr").forEach(tr=>{
+   tr.classList.remove("active");
+   const s=mins(tr.dataset.start),e=mins(tr.dataset.end);
+   if(n>=s&&n<e){
+     tr.classList.add("active");
+     current=label+": "+tr.children[0].textContent;
+   }
+ });
+ return current||label+": Outside school";
+}
+
+function update(){
+ document.getElementById("clock").textContent=new Date().toLocaleTimeString();
+ let txt="";
+ if(mode==="ramadan"){
+   txt=highlight(pypBody,ramadanPYP,"PYP")+" | "+highlight(secondaryBody,ramadanSecondary,"Secondary");
+ }else{
+   txt=highlight(regularBody,regularSchedule,"Regular");
+ }
+ nowLabel.textContent=txt;
+}
+
+/* ---------- MODE SWITCH ---------- */
+
+function setMode(m){
+ mode=m;
+ tabRamadan.setAttribute("aria-selected",m==="ramadan");
+ tabRegular.setAttribute("aria-selected",m==="regular");
+ ramadanGrid.style.display=m==="ramadan"?"grid":"none";
+ regularSingle.style.display=m==="regular"?"block":"none";
+
+ if(m==="ramadan"){
+   build(pypBody,ramadanPYP);
+   build(secondaryBody,ramadanSecondary);
+ }else{
+   build(regularBody,regularSchedule);
+ }
+ update();
+}
+
+tabRamadan.onclick=()=>setMode("ramadan");
+tabRegular.onclick=()=>setMode("regular");
+
+/* ---------- INIT ---------- */
+
+setMode("ramadan");
+setInterval(update,1000);
+
 </script>
 </body>
 </html>
