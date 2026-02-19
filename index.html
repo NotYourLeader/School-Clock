@@ -239,4 +239,59 @@
     }
 
     const firstStart = toMinutes(schedule[0].start);
-    const lastEnd = toMinutes(schedu
+    const lastEnd = toMinutes(schedule[schedule.length-1].end);
+
+    if(nowMins < firstStart) return `${label}: Before school`;
+    if(nowMins >= lastEnd) return `${label}: After school`;
+    return `${label}: Transition / gap`;
+  }
+
+  function update(){
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+    dayLabelEl.textContent = fmtDay(now);
+
+    if(mode === "ramadan"){
+      const p = highlightNow(pypBody, ramadanPYP, "PYP");
+      const s = highlightNow(secondaryBody, ramadanSecondary, "Secondary");
+      nowLabelEl.textContent = `${p} | ${s}`;
+    } else {
+      const r = highlightNow(regularBody, regularSchedule, "Regular");
+      nowLabelEl.textContent = r;
+    }
+  }
+
+  function setMode(nextMode){
+    mode = nextMode;
+
+    tabRamadan.setAttribute("aria-selected", mode === "ramadan");
+    tabRegular.setAttribute("aria-selected", mode === "regular");
+    modeLabelEl.textContent = `Mode: ${mode === "ramadan" ? "Ramadan" : "Regular"}`;
+
+    if(mode === "ramadan"){
+      ramadanGrid.style.display = "grid";
+      regularSingle.style.display = "none";
+      buildTable(pypBody, ramadanPYP);
+      buildTable(secondaryBody, ramadanSecondary);
+    } else {
+      ramadanGrid.style.display = "none";
+      regularSingle.style.display = "block";
+      buildTable(regularBody, regularSchedule);
+    }
+
+    update();
+  }
+
+  // ===== EVENTS =====
+  tabRamadan.addEventListener("click", () => setMode("ramadan"));
+  tabRegular.addEventListener("click", () => setMode("regular"));
+
+  tabRamadan.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("ramadan"); }});
+  tabRegular.addEventListener("keydown", (e) => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); setMode("regular"); }});
+
+  // ===== INIT =====
+  setMode("ramadan");
+  setInterval(update, 1000);
+</script>
+</body>
+</html>
