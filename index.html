@@ -39,6 +39,8 @@ tbody td{padding:12px 14px;border-bottom:1px solid var(--border);}
 tbody tr:last-child td{border-bottom:none;}
 .active{background:rgba(57,217,138,.15);}
 .statusNow{color:var(--accent2);font-weight:700;}
+.prayer-row td{color:#f0c040;font-weight:600;background:rgba(240,192,64,.07);}
+.prayer-row.active{background:rgba(240,192,64,.20);}
 </style>
 </head>
 <body>
@@ -74,7 +76,6 @@ tbody tr:last-child td{border-bottom:none;}
 </div>
 
 <script>
-/* ---------- DOM REFS (NO MAGIC GLOBALS) ---------- */
 const tabRamadan = document.getElementById("tab-ramadan");
 const tabRegular = document.getElementById("tab-regular");
 const ramadanGrid = document.getElementById("ramadanGrid");
@@ -85,7 +86,6 @@ const regularBody = document.getElementById("regularBody");
 const nowLabel = document.getElementById("nowLabel");
 const clockEl = document.getElementById("clock");
 
-/* ---------- SCHEDULES ---------- */
 const ramadanPYP = [
   ["Period 1","09:00","09:30"],
   ["Period 2","09:30","10:00"],
@@ -108,6 +108,7 @@ const ramadanSecondary = [
   ["Period 6 (MYP)","11:30","12:00"],
   ["Period 7 (DP)","12:00","12:30"],
   ["Period 8 (PYP)","12:30","13:00"],
+  ["🕌 Prayer","12:57","13:10"],
   ["Period 9","13:00","13:30"],
   ["Period 10","13:30","14:00"]
 ];
@@ -121,6 +122,7 @@ const regularSchedule = [
   ["P5","11:00","11:40"],
   ["P6","11:40","12:20"],
   ["Lunch","12:20","13:00"],
+  ["🕌 Prayer","12:55","13:05"],
   ["P7","13:00","13:40"],
   ["P8","13:40","14:20"],
   ["P9","14:20","15:00"]
@@ -128,13 +130,13 @@ const regularSchedule = [
 
 let mode = "ramadan";
 
-/* ---------- BUILD TABLE ---------- */
 function build(tbody, data){
   tbody.innerHTML = "";
   data.forEach(([label,start,end]) => {
     const tr = document.createElement("tr");
     tr.dataset.start = start;
     tr.dataset.end = end;
+    if(label.includes("Prayer")) tr.classList.add("prayer-row");
     tr.innerHTML = `
       <td>${label}</td>
       <td>${start} – ${end}</td>
@@ -144,7 +146,6 @@ function build(tbody, data){
   });
 }
 
-/* ---------- TIME LOGIC ---------- */
 function mins(t){
   const [h,m] = t.split(":");
   return (parseInt(h,10)*60) + parseInt(m,10);
@@ -189,7 +190,6 @@ function update(){
   nowLabel.textContent = txt;
 }
 
-/* ---------- MODE SWITCH ---------- */
 function setMode(m){
   mode = m;
 
@@ -212,11 +212,9 @@ function setMode(m){
 tabRamadan.addEventListener("click", () => setMode("ramadan"));
 tabRegular.addEventListener("click", () => setMode("regular"));
 
-/* optional: keyboard toggle */
 tabRamadan.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" ") setMode("ramadan"); });
 tabRegular.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" ") setMode("regular"); });
 
-/* ---------- INIT ---------- */
 setMode("ramadan");
 setInterval(update, 1000);
 </script>
