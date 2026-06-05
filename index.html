@@ -48,8 +48,9 @@ tbody tr:last-child td{border-bottom:none;}
 <div class="wrap">
 
   <div class="tabs" role="tablist" aria-label="Schedule mode">
-    <div class="tab" id="tab-ramadan" role="tab" aria-selected="true" tabindex="0">Ramadan</div>
+    <div class="tab" id="tab-ramadan" role="tab" aria-selected="false" tabindex="0">Ramadan</div>
     <div class="tab" id="tab-regular" role="tab" aria-selected="false" tabindex="0">Regular</div>
+    <div class="tab" id="tab-friday" role="tab" aria-selected="false" tabindex="0">Friday</div>
   </div>
 
   <div class="top">
@@ -69,7 +70,7 @@ tbody tr:last-child td{border-bottom:none;}
   </div>
 
   <div id="regularSingle" class="card" style="display:none;">
-    <h3>Regular</h3>
+    <h3 id="regularTitle">Regular</h3>
     <table><tbody id="regularBody"></tbody></table>
   </div>
 
@@ -78,11 +79,13 @@ tbody tr:last-child td{border-bottom:none;}
 <script>
 const tabRamadan = document.getElementById("tab-ramadan");
 const tabRegular = document.getElementById("tab-regular");
+const tabFriday = document.getElementById("tab-friday");
 const ramadanGrid = document.getElementById("ramadanGrid");
 const regularSingle = document.getElementById("regularSingle");
 const pypBody = document.getElementById("pypBody");
 const secondaryBody = document.getElementById("secondaryBody");
 const regularBody = document.getElementById("regularBody");
+const regularTitle = document.getElementById("regularTitle");
 const nowLabel = document.getElementById("nowLabel");
 const clockEl = document.getElementById("clock");
 
@@ -128,7 +131,17 @@ const regularSchedule = [
   ["P9","14:20","15:00"]
 ];
 
-let mode = "ramadan";
+const fridaySchedule = [
+  ["Lesson 1","07:45","08:20"],
+  ["Lesson 2","08:20","08:55"],
+  ["Lesson 3","08:55","09:30"],
+  ["Break","09:30","09:45"],
+  ["Lesson 4","09:45","10:20"],
+  ["Lesson 5","10:20","10:55"],
+  ["Lesson 6","10:55","11:30"]
+];
+
+let mode = (new Date().getDay() === 5) ? "friday" : "regular";
 
 function build(tbody, data){
   tbody.innerHTML = "";
@@ -183,6 +196,8 @@ function update(){
 
   if(mode === "ramadan"){
     txt = highlight(pypBody,"PYP") + " | " + highlight(secondaryBody,"Secondary");
+  } else if(mode === "friday") {
+    txt = highlight(regularBody,"Friday");
   } else {
     txt = highlight(regularBody,"Regular");
   }
@@ -195,14 +210,19 @@ function setMode(m){
 
   tabRamadan.setAttribute("aria-selected", String(m === "ramadan"));
   tabRegular.setAttribute("aria-selected", String(m === "regular"));
+  tabFriday.setAttribute("aria-selected", String(m === "friday"));
 
   ramadanGrid.style.display = (m === "ramadan") ? "grid" : "none";
-  regularSingle.style.display = (m === "regular") ? "block" : "none";
+  regularSingle.style.display = (m === "regular" || m === "friday") ? "block" : "none";
 
   if(m === "ramadan"){
     build(pypBody, ramadanPYP);
     build(secondaryBody, ramadanSecondary);
+  } else if(m === "friday") {
+    regularTitle.textContent = "Friday";
+    build(regularBody, fridaySchedule);
   } else {
+    regularTitle.textContent = "Regular";
     build(regularBody, regularSchedule);
   }
 
@@ -211,11 +231,13 @@ function setMode(m){
 
 tabRamadan.addEventListener("click", () => setMode("ramadan"));
 tabRegular.addEventListener("click", () => setMode("regular"));
+tabFriday.addEventListener("click", () => setMode("friday"));
 
 tabRamadan.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" ") setMode("ramadan"); });
 tabRegular.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" ") setMode("regular"); });
+tabFriday.addEventListener("keydown", (e)=>{ if(e.key==="Enter"||e.key===" ") setMode("friday"); });
 
-setMode("ramadan");
+setMode(mode);
 setInterval(update, 1000);
 </script>
 
